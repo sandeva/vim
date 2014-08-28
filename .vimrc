@@ -19,3 +19,4 @@ hi DiffAdd ctermfg=white
 hi DiffChange ctermfg=white
 hi DiffDelete ctermfg=white
 hi DiffText ctermfg=white
+autocmd BufWritePost *.coffee silent make!
