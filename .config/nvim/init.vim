@@ -16,7 +16,7 @@ set mouse=a
 set textwidth=79
 set colorcolumn=+1
 " set background=dark
-" autocmd BufWritePost *.coffee silent make!
+autocmd BufWritePost *.coffee silent make!
 
 " Note: Skip initialization for vim-tiny or vim-small.
 if !1 | finish | endif
@@ -42,6 +42,7 @@ NeoBundle 'tpope/vim-fugitive'
 NeoBundle 'Shougo/unite.vim'
 NeoBundle 'Shougo/neomru.vim'
 NeoBundle 'ujihisa/unite-colorscheme'
+NeoBundle 'lepture/vim-jinja'
 let g:unite_source_history_yank_enable=1
 NeoBundle 'Shougo/vimproc.vim', {
 \ 'build' : {
@@ -81,3 +82,5 @@ hi DiffAdd ctermfg=white
 hi DiffChange ctermfg=white
 hi DiffDelete ctermfg=white
 hi DiffText ctermfg=white
+
+set backupdir=/tmp/
