@@ -1,2 +1,0 @@
-3.0
-{'neobundle.vim': {'checked_time': 1414484682, 'installed_uri': 'https://github.com/Shougo/neobundle.vim.git', 'installed_path': '/home/sandeva/.vim/bundle/neobundle.vim', 'revisions': {}, 'updated_time': '1414409539'}, 'python-mode': {'checked_time': 1414484682, 'installed_uri': 'https://github.com/klen/python-mode.git', 'installed_path': '/home/sandeva/.vim/bundle/python-mode', 'revisions': {}, 'updated_time': '1409211409'}}
