@@ -1,23 +1,3 @@
-filetype off
-
-" call pathogen#infect() 
-" call pathogen#helptags()
-
-filetype plugin indent on
-syntax on
-
-set tabstop=4
-set shiftwidth=4
-set expandtab
-set number
-set showcmd
-set hlsearch
-set mouse=a
-set textwidth=79
-set colorcolumn=+1
-" set background=dark
-autocmd BufWritePost *.coffee silent make!
-
 " Note: Skip initialization for vim-tiny or vim-small.
 if !1 | finish | endif
 
@@ -43,6 +23,25 @@ NeoBundle 'Shougo/unite.vim'
 NeoBundle 'Shougo/neomru.vim'
 NeoBundle 'ujihisa/unite-colorscheme'
 NeoBundle 'lepture/vim-jinja'
+NeoBundle 'pangloss/vim-javascript'
+NeoBundle 'mxw/vim-jsx'
+ 
+"------------------------------------
+" sass
+"------------------------------------
+""{{{
+NeoBundle 'AtsushiM/search-parent.vim'
+NeoBundle 'AtsushiM/sass-compile.vim'
+
+let g:sass_compile_auto = 1
+let g:sass_compile_cdloop = 5
+let g:sass_compile_cssdir = ['../static/**/css', 'stylesheet']
+let g:sass_compile_file = ['scss', 'sass']
+let g:sass_compile_beforecmd = ''
+let g:sass_compile_aftercmd = ''
+"}}}
+
+
 let g:unite_source_history_yank_enable=1
 NeoBundle 'Shougo/vimproc.vim', {
 \ 'build' : {
@@ -53,6 +52,35 @@ NeoBundle 'Shougo/vimproc.vim', {
 \ 'unix' : 'gmake',
 \ },
 \ }
+
+
+" My Bundles here:
+" Refer to |:NeoBundle-examples|.
+" Note: You don't set neobundle setting in .gvimrc!
+
+call neobundle#end()
+
+" Required:
+ filetype plugin indent on
+
+" If there are uninstalled bundles found on startup,
+" this will conveniently prompt you to install them.
+NeoBundleCheck
+
+"------------- My Stuff---------------------------
+syntax on
+
+set tabstop=4
+set shiftwidth=4
+set expandtab
+set number
+set showcmd
+set hlsearch
+set mouse=a
+set textwidth=79
+set colorcolumn=+1
+" set background=dark
+autocmd BufWritePost *.coffee silent make!
 
 nmap <Space>u [unite]
 nnoremap [unite]c :<C-u>UniteWithCurrentDir -buffer-name=files buffer file_mru bookmark file<CR>
@@ -65,18 +93,7 @@ nnoremap <silent> [unite]t :<C-u>Unite<Space>tab<CR>
 nnoremap <silent> [unite]h :<C-u>Unite<Space>history/yank<CR>
 nnoremap <silent> [unite]o :<C-u>Unite<Space>outline<CR>
 
-" My Bundles here:
-" Refer to |:NeoBundle-examples|.
-" Note: You don't set neobundle setting in .gvimrc!
 
-call neobundle#end()
-
-" Required:
-filetype plugin indent on
-
-" If there are uninstalled bundles found on startup,
-" this will conveniently prompt you to install them.
-NeoBundleCheck
 colorscheme peachpuff
 hi DiffAdd ctermfg=white
 hi DiffChange ctermfg=white

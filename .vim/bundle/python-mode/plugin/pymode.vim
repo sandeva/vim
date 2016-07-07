@@ -1,5 +1,5 @@
-" vi: fdl=1 
-let g:pymode_version = "0.7.8b"
+" vi: fdl=1
+let g:pymode_version = "0.8.1"
 
 com! PymodeVersion echomsg "Current python-mode version: " . g:pymode_version
 com! PymodeTroubleshooting call pymode#troubleshooting#test()
@@ -19,7 +19,7 @@ filetype plugin on
 " OPTIONS: {{{
 
 " Vim Python interpreter. Set to 'disable' for remove python features.
-call pymode#default('g:pymode_python', 'python')
+call pymode#default('g:pymode_python', '')
 
 " Disable pymode warnings
 call pymode#default('g:pymode_warning', 1)
@@ -36,6 +36,8 @@ call pymode#default("g:pymode_indent", 1)
 
 " Enable/disable pymode folding for pyfiles.
 call pymode#default("g:pymode_folding", 1)
+" Maximum file length to check for nested class/def statements
+call pymode#default("g:pymode_folding_nest_limit", 1000)
 " Change for folding customization (by example enable fold for 'if', 'for')
 call pymode#default("g:pymode_folding_regex", '^\s*\%(class\|def\) \w\+')
 
@@ -47,6 +49,11 @@ call pymode#default("g:pymode_trim_whitespaces", 1)
 
 " Set recomended python options
 call pymode#default("g:pymode_options", 1)
+call pymode#default("g:pymode_options_max_line_length", 80)
+call pymode#default("g:pymode_options_colorcolumn", 1)
+
+" Enable/disable vertical display of python documentation
+call pymode#default("g:pymode_doc_vertical", 0)
 
 " Minimal height of pymode quickfix window
 call pymode#default('g:pymode_quickfix_maxheight', 6)
@@ -120,11 +127,26 @@ call pymode#default("g:pymode_lint_signs", 1)
 
 " Symbol's definitions
 call pymode#default("g:pymode_lint_todo_symbol", "WW")
+call pymode#default("g:pymode_lint_docs_symbol", "DD")
 call pymode#default("g:pymode_lint_comment_symbol", "CC")
 call pymode#default("g:pymode_lint_visual_symbol", "RR")
 call pymode#default("g:pymode_lint_error_symbol", "EE")
 call pymode#default("g:pymode_lint_info_symbol", "II")
 call pymode#default("g:pymode_lint_pyflakes_symbol", "FF")
+
+" Code checkers options
+call pymode#default("g:pymode_lint_options_pep8",
+    \ {'max_line_length': g:pymode_options_max_line_length})
+
+call pymode#default("g:pymode_lint_options_pylint",
+    \ {'max-line-length': g:pymode_options_max_line_length})
+
+call pymode#default("g:pymode_lint_options_mccabe",
+    \ {'complexity': 12})
+
+call pymode#default("g:pymode_lint_options_pep257", {})
+call pymode#default("g:pymode_lint_options_pyflakes", { 'builtins': '_' })
+
 
 " }}}
 
@@ -150,15 +172,21 @@ call pymode#default('g:pymode_rope', 1)
 " System plugin variable
 call pymode#default('g:pymode_rope_current', '')
 
+" Configurable rope project root
+call pymode#default('g:pymode_rope_project_root', '')
+
+" Configurable rope project folder (always relative to project root)
+call pymode#default('g:pymode_rope_ropefolder', '.ropeproject')
+
 " If project hasnt been finded in current working directory, look at parents directory
-call pymode#default('g:pymode_rope_lookup_project', 1)
+call pymode#default('g:pymode_rope_lookup_project', 0)
 
 " Enable Rope completion
 call pymode#default('g:pymode_rope_completion', 1)
 
 " Complete keywords from not imported modules (could make completion slower)
 " Enable autoimport used modules
-call pymode#default('g:pymode_rope_autoimport', 1)
+call pymode#default('g:pymode_rope_autoimport', 0)
 
 " Offer to import object after complete (if that not be imported before)
 call pymode#default('g:pymode_rope_autoimport_import_after_complete', 0)
@@ -240,32 +268,48 @@ if &compatible
 endif
 filetype plugin on
 
-if exists('+shellslash')
-    set shellslash
-endif
-
 " Disable python-related functionality
 " let g:pymode_python = 'disable'
 " let g:pymode_python = 'python3'
-if g:pymode_python != 'disable' && (g:pymode_python == 'python3' || !has('python') && has('python3'))
-    let g:pymode_python = 'python3'
-    command! -nargs=1 PymodePython python3 <args>
 
-elseif g:pymode_python != 'disable' && has('python')
-    let g:pymode_python = 'python'
+" UltiSnips Fixes
+if !len(g:pymode_python)
+    if exists('g:_uspy') && g:_uspy == ':py'
+        let g:pymode_python = 'python'
+    elseif exists('g:_uspy') && g:_uspy == ':py3'
+        let g:pymode_python = 'python3'
+    elseif has("python")
+        let g:pymode_python = 'python'
+    elseif has("python3")
+        let g:pymode_python = 'python3'
+    else
+        let g:pymode_python = 'disable'
+    endif
+endif
+
+if g:pymode_python == 'python'
+
     command! -nargs=1 PymodePython python <args>
+    let g:UltiSnipsUsePythonVersion = 2
+
+elseif g:pymode_python == 'python3'
+
+    command! -nargs=1 PymodePython python3 <args>
+    let g:UltiSnipsUsePythonVersion = 3
 
 else
 
     let g:pymode_doc = 0
     let g:pymode_lint = 0
     let g:pymode_path = 0
-    let g:pymode_python = 'disable'
     let g:pymode_rope = 0
     let g:pymode_run = 0
     let g:pymode_virtualenv = 0
 
+    command! -nargs=1 PymodePython echo <args>
+
 endif
+
 
 command! PymodeVersion echomsg "Pymode version: " . g:pymode_version . " interpreter: " . g:pymode_python . " lint: " . g:pymode_lint . " rope: " . g:pymode_rope
 

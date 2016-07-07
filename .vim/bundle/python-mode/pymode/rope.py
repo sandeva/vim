@@ -1,7 +1,6 @@
 """ Rope support in pymode. """
 from __future__ import absolute_import, print_function
 
-import multiprocessing
 import os.path
 import re
 import site
@@ -12,7 +11,6 @@ from rope.base.fscommands import FileSystemCommands # noqa
 from rope.base.taskhandle import TaskHandle # noqa
 from rope.contrib import autoimport as rope_autoimport, codeassist, findit, generate # noqa
 from rope.refactor import ModuleToPackage, ImportOrganizer, rename, extract, inline, usefunction, move, change_signature, importutils # noqa
-
 
 from .environment import env
 
@@ -44,7 +42,6 @@ def completions():
     :return None:
 
     """
-
     row, col = env.cursor
     if env.var('a:findstart', True):
         count = 0
@@ -108,7 +105,6 @@ def get_proporsals(source, offset, base='', dot=False):
     :return str:
 
     """
-
     with RopeContext() as ctx:
 
         try:
@@ -139,7 +135,6 @@ def get_proporsals(source, offset, base='', dot=False):
 @env.catch_exceptions
 def goto():
     """ Goto definition. """
-
     with RopeContext() as ctx:
         source, offset = env.get_offset_params()
 
@@ -151,14 +146,14 @@ def goto():
             return
 
         env.goto_file(
-            found_resource.real_path, cmd=ctx.options.get('goto_definition_cmd'))
+            found_resource.real_path,
+            cmd=ctx.options.get('goto_definition_cmd'))
         env.goto_line(line)
 
 
 @env.catch_exceptions
 def show_doc():
     """ Show documentation. """
-
     with RopeContext() as ctx:
         source, offset = env.get_offset_params()
         try:
@@ -173,7 +168,6 @@ def show_doc():
 
 def find_it():
     """ Find occurrences. """
-
     with RopeContext() as ctx:
         _, offset = env.get_offset_params()
         try:
@@ -194,7 +188,6 @@ def find_it():
 
 def update_python_path(paths):
     """ Update sys.path and make sure the new items come first. """
-
     old_sys_path_items = list(sys.path)
 
     for path in paths:
@@ -212,7 +205,6 @@ def update_python_path(paths):
 
 def organize_imports():
     """ Organize imports in current file. """
-
     with RopeContext() as ctx:
         organizer = ImportOrganizer(ctx.project)
         changes = organizer.organize_imports(ctx.resource)
@@ -227,14 +219,22 @@ def regenerate():
     """ Clear cache. """
     with RopeContext() as ctx:
         ctx.project.pycore._invalidate_resource_cache(ctx.resource) # noqa
-        ctx.importer.generate_cache(resources=[ctx.resource])
+        ctx.importer.generate_cache()
         ctx.project.sync()
 
 
 def new():
     """ Create a new project. """
-    root = env.var('input("Enter project root: ", getcwd())')
-    prj = project.Project(projectroot=root)
+    root = None
+    if env.var('a:0') != '0':
+        root = env.var('a:1')
+    else:
+        default = env.var('g:pymode_rope_project_root')
+        if not default:
+            default = env.var('getcwd()')
+        root = env.var('input("Enter project root: ", "%s")' % default)
+    ropefolder = env.var('g:pymode_rope_ropefolder')
+    prj = project.Project(projectroot=root, ropefolder=ropefolder)
     prj.close()
     env.message("Project is opened: %s" % root)
 
@@ -245,7 +245,6 @@ def undo():
     :return bool:
 
     """
-
     with RopeContext() as ctx:
         changes = ctx.project.history.tobe_undone
         if changes is None:
@@ -264,7 +263,6 @@ def redo():
     :return bool:
 
     """
-
     with RopeContext() as ctx:
         changes = ctx.project.history.tobe_redone
         if changes is None:
@@ -291,14 +289,23 @@ def cache_project(cls):
         if resources.get(path):
             return resources.get(path)
 
-        project_path = env.curdir
-        env.debug('Look ctx', project_path)
-        if env.var('g:pymode_rope_lookup_project', True):
-            project_path = look_ropeproject(project_path)
+        project_path = env.var('g:pymode_rope_project_root')
+        if not project_path:
+            project_path = env.curdir
+            env.debug('Look ctx', project_path)
+            if env.var('g:pymode_rope_lookup_project', True):
+                project_path = look_ropeproject(project_path)
 
-        ctx = projects.get(project_path)
+        if not os.path.exists(project_path):
+            env.error("Rope project root not exist: %s" % project_path)
+            ctx = None
+
+        else:
+            ctx = projects.get(project_path)
+
         if not ctx:
             projects[project_path] = ctx = cls(path, project_path)
+
         resources[path] = ctx
         return ctx
     return get_ctx
@@ -327,7 +334,8 @@ def autoimport():
             _insert_import(word, modules[0], ctx)
 
         else:
-            module = env.user_input_choices('Which module to import:', *modules)
+            module = env.user_input_choices(
+                'Which module to import:', *modules)
             _insert_import(word, module, ctx)
 
         return True
@@ -339,11 +347,10 @@ class RopeContext(object):
     """ A context manager to have a rope project context. """
 
     def __init__(self, path, project_path):
-
+        """ Init Rope context. """
         self.path = path
 
-        self.project = project.Project(
-            project_path, fscommands=FileSystemCommands())
+        self.project = project.Project(project_path, fscommands=FileSystemCommands())
 
         self.importer = rope_autoimport.AutoImport(
             project=self.project, observe=False)
@@ -362,13 +369,14 @@ class RopeContext(object):
         if os.path.exists("%s/__init__.py" % project_path):
             sys.path.append(project_path)
 
-        if self.options.get('autoimport') == '1':
+        if self.options.get('autoimport'):
             self.generate_autoimport_cache()
 
         env.debug('Context init', project_path)
         env.message('Init Rope project: %s' % project_path)
 
     def __enter__(self):
+        """ Enter to Rope ctx. """
         env.let('g:pymode_rope_current', self.project.root.real_path)
         self.project.validate(self.project.root)
         self.resource = libutils.path_to_resource(
@@ -383,12 +391,12 @@ class RopeContext(object):
         return self
 
     def __exit__(self, t, value, traceback):
+        """ Exit from Rope ctx. """
         if t is None:
             self.project.close()
 
     def generate_autoimport_cache(self):
         """ Update autoimport cache. """
-
         env.message('Regenerate autoimport cache.')
         modules = self.options.get('autoimport_modules', [])
 
@@ -398,9 +406,7 @@ class RopeContext(object):
                 importer.generate_modules_cache(modules)
             importer.project.sync()
 
-        process = multiprocessing.Process(target=_update_cache, args=(
-            self.importer, modules))
-        process.start()
+        _update_cache(self.importer, modules)
 
 
 class ProgressHandler(object):
@@ -408,6 +414,7 @@ class ProgressHandler(object):
     """ Handle task progress. """
 
     def __init__(self, msg):
+        """ Init progress handler. """
         self.handle = TaskHandle(name="refactoring_handle")
         self.handle.add_observer(self)
         self.message = msg
@@ -437,7 +444,6 @@ class Refactoring(object): # noqa
         :return bool:
 
         """
-
         with RopeContext() as ctx:
 
             if not ctx.resource:
@@ -451,15 +457,19 @@ class Refactoring(object): # noqa
                 if not input_str:
                     return False
 
-                changes = self.get_changes(refactor, input_str)
-
                 action = env.user_input_choices(
-                    'Choose what to do:', 'perform', 'preview')
+                    'Choose what to do:', 'perform', 'preview',
+                    'perform in class hierarchy',
+                    'preview in class hierarchy')
+
+                in_hierarchy = action.endswith("in class hierarchy")
+
+                changes = self.get_changes(refactor, input_str, in_hierarchy)
 
                 if not action:
                     return False
 
-                if action == 'preview':
+                if action.startswith('preview'):
                     print("\n   ")
                     print("-------------------------------")
                     print("\n%s\n" % changes.get_description())
@@ -473,13 +483,12 @@ class Refactoring(object): # noqa
             except exceptions.RefactoringError as e:
                 env.error(str(e))
 
-            except Exception as e:
+            except Exception as e: # noqa
                 env.error('Unhandled exception in Pymode: %s' % e)
 
     @staticmethod
     def get_refactor(ctx):
         """ Get refactor object. """
-
         raise NotImplementedError
 
     @staticmethod
@@ -489,19 +498,11 @@ class Refactoring(object): # noqa
         :return bool: True
 
         """
-
         return True
 
     @staticmethod
-    def get_changes(refactor, input_str):
-        """ Get changes.
-
-        :return Changes:
-
-        """
-        progress = ProgressHandler('Calculate changes ...')
-        return refactor.get_changes(
-            input_str, task_handle=progress.handle)
+    def get_changes(refactor, input_str, in_hierarchy=False):
+        return refactor.get_changes(input_str)
 
 
 class RenameRefactoring(Refactoring):
@@ -539,6 +540,15 @@ class RenameRefactoring(Refactoring):
 
         return newname
 
+    @staticmethod
+    def get_changes(refactor, input_str, in_hierarchy=False):
+        """ Get changes.
+
+        :return Changes:
+
+        """
+        return refactor.get_changes(input_str, in_hierarchy=in_hierarchy)
+
 
 class ExtractMethodRefactoring(Refactoring):
 
@@ -562,16 +572,6 @@ class ExtractMethodRefactoring(Refactoring):
         _, offset2 = env.get_offset_params(cursor2)
         return extract.ExtractMethod(
             ctx.project, ctx.resource, offset1, offset2)
-
-    @staticmethod
-    def get_changes(refactor, input_str):
-        """ Get changes.
-
-        :return Changes:
-
-        """
-
-        return refactor.get_changes(input_str)
 
 
 class ExtractVariableRefactoring(Refactoring):
@@ -597,16 +597,6 @@ class ExtractVariableRefactoring(Refactoring):
         return extract.ExtractVariable(
             ctx.project, ctx.resource, offset1, offset2)
 
-    @staticmethod
-    def get_changes(refactor, input_str):
-        """ Get changes.
-
-        :return Changes:
-
-        """
-
-        return refactor.get_changes(input_str)
-
 
 class InlineRefactoring(Refactoring):
 
@@ -623,14 +613,13 @@ class InlineRefactoring(Refactoring):
         return inline.create_inline(ctx.project, ctx.resource, offset)
 
     @staticmethod
-    def get_changes(refactor, input_str):
+    def get_changes(refactor, input_str, in_hierarchy=False):
         """ Get changes.
 
         :return Changes:
 
         """
-        progress = ProgressHandler('Calculate changes ...')
-        return refactor.get_changes(task_handle=progress.handle)
+        return refactor.get_changes()
 
 
 class UseFunctionRefactoring(Refactoring):
@@ -648,15 +637,13 @@ class UseFunctionRefactoring(Refactoring):
         return usefunction.UseFunction(ctx.project, ctx.resource, offset)
 
     @staticmethod
-    def get_changes(refactor, input_str):
+    def get_changes(refactor, input_str, in_hierarchy=False):
         """ Get changes.
 
         :return Changes:
 
         """
-        progress = ProgressHandler('Calculate changes ...')
-        return refactor.get_changes(
-            resources=[refactor.resource], task_handle=progress.handle)
+        return refactor.get_changes()
 
 
 class ModuleToPackageRefactoring(Refactoring):
@@ -673,7 +660,7 @@ class ModuleToPackageRefactoring(Refactoring):
         return ModuleToPackage(ctx.project, ctx.resource)
 
     @staticmethod
-    def get_changes(refactor, input_str):
+    def get_changes(refactor, input_str, in_hierarchy=False):
         """ Get changes.
 
         :return Changes:
@@ -735,18 +722,17 @@ class ChangeSignatureRefactoring(Refactoring):
         return change_signature.ChangeSignature(
             ctx.project, ctx.resource, offset)
 
-    def get_changes(self, refactor, input_string):
+    def get_changes(self, refactor, input_string, in_hierarchy=False):
         """ Function description.
 
         :return Rope.changes:
 
         """
-
         args = re.sub(r'[\s\(\)]+', '', input_string).split(',')
         olds = [arg[0] for arg in refactor.get_args()]
 
         changers = []
-        for arg in [a for a in olds if not a in args]:
+        for arg in [a for a in olds if a not in args]:
             changers.append(change_signature.ArgumentRemover(olds.index(arg)))
             olds.remove(arg)
 
@@ -760,7 +746,7 @@ class ChangeSignatureRefactoring(Refactoring):
         changers.append(change_signature.ArgumentReorderer(
             order, autodef='None'))
 
-        return refactor.get_changes(changers)
+        return refactor.get_changes(changers, in_hierarchy=in_hierarchy)
 
 
 class GenerateElementRefactoring(Refactoring):
@@ -782,7 +768,7 @@ class GenerateElementRefactoring(Refactoring):
         return generate.create_generate(
             self.kind, ctx.project, ctx.resource, offset)
 
-    def get_changes(self, refactor, input_str):
+    def get_changes(self, refactor, input_str, in_hierarchy=False):
         """ Function description.
 
         :return Rope.changes:

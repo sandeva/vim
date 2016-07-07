@@ -13,11 +13,12 @@ clean:
 travis:
 	rake test
 
-.PHONY: test
+.PHONY: test t
 test:
 	bundle install
 	rm -rf $(CURDIR)/.ropeproject
 	rake test
+t: test
 
 .PHONY: pylama
 pylama:
@@ -25,11 +26,17 @@ pylama:
 	make $(PYLAMA)
 	make $(PYLAMA)/lint/pylama_pylint
 
+.PHONY: rope
+rope:
+	@git clone https://github.com/python-rope/rope.git $(CURDIR)/_/rope
+	@rm -rf $(CURDIR)/pymode/libs/rope
+	@cp -r $(CURDIR)/_/rope/rope $(CURDIR)/pymode/libs/.
+
 $(PYLAMA):
-	cp -r ~/Dropbox/projects/pylama/pylama $(PYLAMA)
+	cp -r $$PRJDIR/pylama/pylama $(PYLAMA)
 
 $(PYLAMA)/lint/pylama_pylint:
-	cp -r ~/Dropbox/projects/pylama/plugins/pylama_pylint/pylama_pylint/ $(PYLAMA)/lint/pylama_pylint
+	cp -r $$PRJDIR/pylama/plugins/pylama_pylint/pylama_pylint/ $(PYLAMA)/lint/pylama_pylint
 
 $(CURDIR)/build:
 	mkdir -p $(CURDIR)/build/usr/share/vim/addons

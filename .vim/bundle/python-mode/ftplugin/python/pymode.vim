@@ -2,13 +2,31 @@ if !g:pymode || pymode#default('b:pymode', 1)
     finish
 endif
 
+if g:pymode_python == 'disable'
+
+    if g:pymode_warning
+        call pymode#error("Pymode requires vim compiled with +python. Most of features will be disabled.")
+    endif
+
+    finish
+
+else
+
+
+let b:pymode_modified = &modified
+
 " Init paths
 if !pymode#default('g:pymode_init', 1)
-    call pymode#init(expand('<sfile>:p:h:h:h'), g:pymode_paths)
-    call pymode#virtualenv#init()
-    call pymode#breakpoint#init()
-    PymodePython from pymode.utils import patch_paths
-    PymodePython patch_paths()
+
+        call pymode#init(expand('<sfile>:p:h:h:h'), g:pymode_paths)
+        call pymode#virtualenv#init()
+        call pymode#breakpoint#init()
+
+        PymodePython from pymode.utils import patch_paths
+        PymodePython patch_paths()
+
+    endif
+
 endif
 
 command! -buffer -nargs=1 PymodeVirtualenv call pymode#virtualenv#activate(<args>)
@@ -56,7 +74,10 @@ if g:pymode_options
         setlocal number
     endif
     setlocal nowrap
-    setlocal textwidth=79
+    exe "setlocal textwidth=" . g:pymode_options_max_line_length
+    if g:pymode_options_colorcolumn && exists('+colorcolumn')
+        setlocal colorcolumn=+1
+    endif
     setlocal commentstring=#%s
     setlocal define=^\s*\\(def\\\\|class\\)
 endif
@@ -177,7 +198,7 @@ if g:pymode_rope
         inoremap <silent> <buffer> . .<C-R>=pymode#rope#complete_on_dot()<CR>
     end
 
-    command! -buffer PymodeRopeNewProject call pymode#rope#new()
+    command! -buffer -nargs=? PymodeRopeNewProject call pymode#rope#new(<f-args>)
     command! -buffer PymodeRopeUndo call pymode#rope#undo()
     command! -buffer PymodeRopeRedo call pymode#rope#redo()
     command! -buffer PymodeRopeRenameModule call pymode#rope#rename_module()

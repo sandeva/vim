@@ -2,7 +2,6 @@
 "
 PymodePython import pymode
 
-
 fun! pymode#doc#find() "{{{
     " Extract the 'word' at the cursor, expanding leftwards across identifiers
     " and the . operator, and rightwards across the identifier only.
@@ -19,8 +18,6 @@ fun! pymode#doc#find() "{{{
     call pymode#doc#show(word)
 endfunction "}}}
 
-
-
 fun! pymode#doc#show(word) "{{{
     if a:word == ''
         call pymode#error("No name/symbol under cursor!")
@@ -32,7 +29,9 @@ fun! pymode#doc#show(word) "{{{
     setlocal nomodifiable
     setlocal nomodified
     setlocal filetype=rst
+    if g:pymode_doc_vertical
+        wincmd L
+    endif
     wincmd p
 
 endfunction "}}}
-
